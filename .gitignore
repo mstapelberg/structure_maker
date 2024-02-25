@@ -3,6 +3,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# folders
+ce_test*/
+potim_0.25
+*.tar.gz
+smol/
+
+
+
 # C extensions
 *.so
 
