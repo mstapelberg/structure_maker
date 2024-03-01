@@ -1,0 +1,15 @@
+# boss input file
+# for analytic function f(x) = sin(x) + 1.5*exp(-(x-4.3)**2), 0<x<7
+
+# optimization
+userfn        user_function.py
+bounds        0 7
+yrange        -1 1
+kernel        rbf
+initpts       5
+iterpts       15
+
+# post-processing
+pp_models        1
+pp_truef_npts    50
+
