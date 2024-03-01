@@ -1,0 +1,6 @@
+Initial minimisation of TST
+ &cntrl
+  imin=0, nstlim=0, ioutfm=0, ntwf=1,
+  temp0=0, tempi=0,
+  cut=16, ntb=0, igb=0,
+ &end
