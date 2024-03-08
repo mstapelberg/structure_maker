@@ -9,6 +9,7 @@ potim_0.25
 *.tar.gz
 smol/
 CE_Vasp_*/
+VASP_Results/
 
 
 
