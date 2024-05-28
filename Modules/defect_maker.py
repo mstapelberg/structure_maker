@@ -44,7 +44,7 @@ def return_x_neighbors(structure, target_atom_index, x_neighbor, alat, tolerance
         print('x_neighbor must be 1, 2, or 3')
         return None
 
-    print(f"Cutoff distance: {cutoff}")
+    #print(f"Cutoff distance: {cutoff}")
 
     # Manually compute distances to all atoms and filter within cutoff distance
     filtered_neighbors = []
@@ -54,7 +54,7 @@ def return_x_neighbors(structure, target_atom_index, x_neighbor, alat, tolerance
             if distance <= cutoff:
                 filtered_neighbors.append({'site': site, 'index': i, 'distance': distance})
 
-    print(f"Filtered neighbors within cutoff: {filtered_neighbors}")
+    #print(f"Filtered neighbors within cutoff: {filtered_neighbors}")
 
     # Get the number of indices based on if we need the nearest, next-nearest, or next-next-nearest neighbors
     if x_neighbor == 1:
@@ -67,14 +67,14 @@ def return_x_neighbors(structure, target_atom_index, x_neighbor, alat, tolerance
         print('x_neighbor must be 1, 2, or 3')
         return None
 
-    print(f"Sorted neighbors: {sorted_neighbors}")
+    #print(f"Sorted neighbors: {sorted_neighbors}")
 
     # Get the indices and distances of the nearest neighbors sorted by distance
     nearest_neighbors = [n['index'] for n in sorted_neighbors]
     distances = [n['distance'] for n in sorted_neighbors]
 
-    print(f"Nearest neighbors: {nearest_neighbors}")
-    print(f"Distances: {distances}")
+    #print(f"Nearest neighbors: {nearest_neighbors}")
+    #print(f"Distances: {distances}")
 
     return nearest_neighbors, distances
 
