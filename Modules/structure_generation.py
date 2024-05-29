@@ -3,8 +3,14 @@ from pymatgen.core.periodic_table import Specie
 from pymatgen.core.composition import Composition
 import math
 import random
+import json 
+import os 
 
-
+def load_compositions(json_file):
+    """Load compositions from a JSON file."""
+    with open(json_file) as f:
+        compositions = json.load(f)
+    return compositions
 
 def create_cca_primitive(comp_list, a, prim=True):
     """
@@ -89,13 +95,13 @@ def closest_composition(comp, num_atoms, bal_element):
 
     return atoms, actual_fractions
 
-def generate_random_supercells(composition, num_structures, lattice_parameter=3.01, supercell_size=4, supercell_type='cubic', seed=42):
+def generate_random_supercells(composition, num_structures=3, lattice_parameter=3.01, supercell_size=4, supercell_type='cubic', seed=42):
     """
     Generate random supercells based on the given composition.
 
     Args:
         composition (dict): A dictionary representing the composition of the supercell, where the keys are the element symbols and the values are the number of atoms for each element.
-        num_structures (int): The number of supercells to generate.
+        num_structures (int, optional): The number of supercells to generate. Defaults to 3.
         lattice_parameter (float, optional): The lattice parameter of the supercell. Defaults to 3.01.
         supercell_size (int, optional): The size of the supercell in each dimension. Defaults to 4.
         supercell_type (str, optional): The type of supercell to generate. Can be 'cubic' or 'prim'. Defaults to 'cubic'.
@@ -107,29 +113,55 @@ def generate_random_supercells(composition, num_structures, lattice_parameter=3.
     random.seed(seed) 
     supercells = []
 
-    comp_list = [key for key in composition]
+    # Calculate the total number of atoms in the supercell
+    num_atoms = supercell_size ** 3 * 2  # For a BCC structure, 2 atoms per primitive cell
+
     for _ in range(num_structures):
         if supercell_type == 'cubic':
-            #prim_cell = create_cca_primitive()
-            # what is the difference between giving a one element per site, versus giving a partial occupancy for each element? 
-            prim_cell = Structure(Lattice.cubic(lattice_parameter), [comp_list[0],comp_list[0]], [[0, 0, 0],[0.5, 0.5, 0.5]])
+            prim_cell = Structure(Lattice.cubic(lattice_parameter), [list(composition.keys())[0], list(composition.keys())[0]], [[0, 0, 0], [0.5, 0.5, 0.5]])
         elif supercell_type == 'prim':
-            prim_cell = Structure(Lattice.cubic(lattice_parameter), [comp_list[0]], [[0, 0, 0]])
+            prim_cell = Structure(Lattice.cubic(lattice_parameter), [list(composition.keys())[0]], [[0, 0, 0]])
         
-        supercell = prim_cell * (supercell_size,supercell_size,supercell_size)
-
+        supercell = prim_cell * (supercell_size, supercell_size, supercell_size)
         all_indices = list(range(len(supercell.sites)))
 
-        for element, count in composition.items():
+        # Convert fractional composition to integer counts
+        element_counts = {element: int(round(fraction * num_atoms)) for element, fraction in composition.items()}
+        total_assigned_atoms = sum(element_counts.values())
+
+        # Adjust the count of the element with the highest fraction to ensure the total number of atoms is correct
+        if total_assigned_atoms != num_atoms:
+            adjustment = num_atoms - total_assigned_atoms
+            max_element = max(element_counts, key=element_counts.get)
+            element_counts[max_element] += adjustment
+
+        for element, count in element_counts.items():
             selected_indices = random.sample(all_indices, count)
-            
             for index in selected_indices:
-                supercell.replace(index,element)
-            
+                supercell.replace(index, element)
             all_indices = [index for index in all_indices if index not in selected_indices]
         
         supercell = supercell.get_sorted_structure()
-
         supercells.append(supercell)
 
     return supercells
+
+def create_supercells_for_compositions(json_file, output_dir, num_structures=3, lattice_parameter=3.01, supercell_size=4, supercell_type='cubic', seed=42):
+    """Create supercells for compositions loaded from a JSON file and save them to the specified directory."""
+    compositions = load_compositions(json_file)
+    all_supercells = []
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    for composition in compositions:
+        comp_dict = {k: v for k, v in composition.items() if k != "Generation"}
+        generation = composition["Generation"]
+        supercells = generate_random_supercells(comp_dict, num_structures, lattice_parameter, supercell_size, supercell_type, seed)
+        for i, supercell in enumerate(supercells):
+            filename = os.path.join(output_dir, f"supercell_gen{generation}_comp{i+1}.cif")
+            supercell.to(fmt="cif", filename=filename)
+            all_supercells.append((filename, generation))
+
+    return all_supercells
+
