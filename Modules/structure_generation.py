@@ -95,32 +95,41 @@ def closest_composition(comp, num_atoms, bal_element):
 
     return atoms, actual_fractions
 
-def generate_random_supercells(composition, num_structures=3, lattice_parameter=3.01, supercell_size=4, supercell_type='cubic', seed=42):
+def generate_random_supercells(composition, num_structures=3, lattice_parameter=3.01, supercell_size=4, supercell_type='prim', seed=42):
     """
     Generate random supercells based on the given composition.
 
     Args:
-        composition (dict): A dictionary representing the composition of the supercell, where the keys are the element symbols and the values are the number of atoms for each element.
+        composition (dict): A dictionary representing the composition of the supercell, where the keys are the element symbols and the values are the fractions of each element.
         num_structures (int, optional): The number of supercells to generate. Defaults to 3.
         lattice_parameter (float, optional): The lattice parameter of the supercell. Defaults to 3.01.
         supercell_size (int, optional): The size of the supercell in each dimension. Defaults to 4.
-        supercell_type (str, optional): The type of supercell to generate. Can be 'cubic' or 'prim'. Defaults to 'cubic'.
+        supercell_type (str, optional): The type of supercell to generate. Can be 'cubic' or 'prim'. Defaults to 'prim'.
         seed (int, optional): The seed value for the random number generator. Defaults to 42.
 
     Returns:
         list: A list of generated supercells, each represented as a `pymatgen.Structure` object.
     """
-    random.seed(seed) 
+    random.seed(seed)
     supercells = []
 
     # Calculate the total number of atoms in the supercell
-    num_atoms = supercell_size ** 3 * 2  # For a BCC structure, 2 atoms per primitive cell
+    if supercell_type == 'cubic':
+        num_atoms = supercell_size ** 3 * 2  # For a BCC structure, 2 atoms per primitive cell
+    else:
+        num_atoms = supercell_size ** 3  # For a primitive structure, 1 atom per primitive cell
 
     for _ in range(num_structures):
         if supercell_type == 'cubic':
             prim_cell = Structure(Lattice.cubic(lattice_parameter), [list(composition.keys())[0], list(composition.keys())[0]], [[0, 0, 0], [0.5, 0.5, 0.5]])
         elif supercell_type == 'prim':
-            prim_cell = Structure(Lattice.cubic(lattice_parameter), [list(composition.keys())[0]], [[0, 0, 0]])
+            a = lattice_parameter
+            lattice_vectors = [
+            [0.5 * a, 0.5 * a, 0.5 * -a],
+            [0.5 * a, 0.5 * -a, 0.5 * a],
+            [0.5 * -a, 0.5 * a, 0.5 * a]
+            ]
+            prim_cell = Structure(lattice_vectors, [list(composition.keys())[0]], [[0, 0, 0]])
         
         supercell = prim_cell * (supercell_size, supercell_size, supercell_size)
         all_indices = list(range(len(supercell.sites)))
@@ -135,7 +144,14 @@ def generate_random_supercells(composition, num_structures=3, lattice_parameter=
             max_element = max(element_counts, key=element_counts.get)
             element_counts[max_element] += adjustment
 
+        # Ensure no negative counts and adjust for rounding errors
+        for element in element_counts:
+            if element_counts[element] < 0:
+                element_counts[element] = 0
+
         for element, count in element_counts.items():
+            if count > len(all_indices):
+                raise ValueError(f"Element count for {element} ({count}) exceeds the number of available sites ({len(all_indices)}).")
             selected_indices = random.sample(all_indices, count)
             for index in selected_indices:
                 supercell.replace(index, element)
@@ -146,22 +162,48 @@ def generate_random_supercells(composition, num_structures=3, lattice_parameter=
 
     return supercells
 
-def create_supercells_for_compositions(json_file, output_dir, num_structures=3, lattice_parameter=3.01, supercell_size=4, supercell_type='cubic', seed=42):
-    """Create supercells for compositions loaded from a JSON file and save them to the specified directory."""
+
+def create_supercells_for_compositions(json_file, output_dir, num_structures=3, lattice_parameter=3.01, supercell_size=4, supercell_type='prim', seed=42):
+    """
+    Create supercells for compositions loaded from a JSON file and save them to the specified directory.
+    Also save metadata about each generated supercell to a JSON file.
+
+    Args:
+        json_file (str): Path to the JSON file containing compositions.
+        output_dir (str): Directory to save the generated supercells.
+        num_structures (int, optional): Number of supercells to generate for each composition. Defaults to 3.
+        lattice_parameter (float, optional): Lattice parameter of the supercells. Defaults to 3.01.
+        supercell_size (int, optional): Size of the supercell in each dimension. Defaults to 4.
+        supercell_type (str, optional): Type of supercell to generate. Can be 'cubic' or 'prim'. Defaults to 'prim'.
+        seed (int, optional): Seed value for the random number generator. Defaults to 42.
+
+    Returns:
+        list: A list of dictionaries containing metadata about each generated supercell.
+    """
     compositions = load_compositions(json_file)
-    all_supercells = []
+    all_supercells_metadata = []
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    for composition in compositions:
+    for index, composition in enumerate(compositions):
         comp_dict = {k: v for k, v in composition.items() if k != "Generation"}
         generation = composition["Generation"]
         supercells = generate_random_supercells(comp_dict, num_structures, lattice_parameter, supercell_size, supercell_type, seed)
         for i, supercell in enumerate(supercells):
-            filename = os.path.join(output_dir, f"supercell_gen{generation}_comp{i+1}.cif")
+            filename = os.path.join(output_dir, f"supercell_gen{generation}_comp{index+1}_struct{i+1}.cif")
             supercell.to(fmt="cif", filename=filename)
-            all_supercells.append((filename, generation))
+            metadata = {
+                "filename": filename,
+                "composition": comp_dict,
+                "generation": generation,
+                "structure": supercell.as_dict()
+            }
+            all_supercells_metadata.append(metadata)
 
-    return all_supercells
+    # Save metadata to JSON file
+    metadata_json_file = os.path.join(output_dir, "supercells_metadata.json")
+    with open(metadata_json_file, 'w') as f:
+        json.dump(all_supercells_metadata, f)
 
+    return all_supercells_metadata
