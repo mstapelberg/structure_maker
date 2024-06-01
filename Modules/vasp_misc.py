@@ -53,7 +53,9 @@ def make_vasp_job(supercell, job_path, kpoints_params, vol_relax = False, incar_
         isif = 3
     else:
         isif = 2
-    incar_params = {'ALGO':'Fast',
+
+    if incar_params is None:
+        incar_params = {'ALGO':'Fast',
         'ENCUT': 360,
         'EDIFF': 1E-6,
         'EDIFFG': -0.01,
@@ -67,12 +69,15 @@ def make_vasp_job(supercell, job_path, kpoints_params, vol_relax = False, incar_
         'NELMIN' : 5,
         'NSW' : 200,
         'PREC' : 'Accurate',
-        'IBRION' : 3,
+        'IBRION' : 2,
         'SMASS' : 1.85,
         'POTIM' : 0.25,
         'ISIF' : isif,
         #'NBANDS' : supercell.num_sites*2*5, # assuming 5 electrons per atom
-        }
+        } 
+    else:
+        incar_params['ISIF'] = isif
+        
     incar = Incar(incar_params)
 
     # make slurm file 
