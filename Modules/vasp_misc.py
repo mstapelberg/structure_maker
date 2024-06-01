@@ -55,7 +55,7 @@ def make_vasp_job(supercell, job_path, kpoints_params, vol_relax = False, incar_
         isif = 2
 
     if incar_params is None:
-        incar_params = {'ALGO':'Fast',
+        incar_params = {'ALGO':'Normal', # from FAST
         'ENCUT': 360,
         'EDIFF': 1E-6,
         'EDIFFG': -0.01,
@@ -70,8 +70,8 @@ def make_vasp_job(supercell, job_path, kpoints_params, vol_relax = False, incar_
         'NSW' : 200,
         'PREC' : 'Accurate',
         'IBRION' : 2,
-        'SMASS' : 1.85,
-        'POTIM' : 0.25,
+        #'SMASS' : 1.85,
+        'POTIM' : 0.2, # from 0.25
         'ISIF' : isif,
         #'NBANDS' : supercell.num_sites*2*5, # assuming 5 electrons per atom
         } 
