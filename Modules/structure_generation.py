@@ -152,7 +152,12 @@ def generate_random_supercells(composition, num_structures=3, lattice_parameter=
         for element, count in element_counts.items():
             if count > len(all_indices):
                 raise ValueError(f"Element count for {element} ({count}) exceeds the number of available sites ({len(all_indices)}).")
-            selected_indices = random.sample(all_indices, count)
+            #selected_indices = random.sample(all_indices, count)
+            count = min(count, len(all_indices))
+            if count >= 0:
+                selected_indices = random.sample(all_indices, count)
+            else:
+                raise ValueError("Count cannot be negative")
             for index in selected_indices:
                 supercell.replace(index, element)
             all_indices = [index for index in all_indices if index not in selected_indices]
