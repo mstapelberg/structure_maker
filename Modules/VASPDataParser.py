@@ -158,6 +158,54 @@ class VASPDataParser:
                 else:
                     with open(os.path.join(subdirectory_path,'vasp_results_all.json'), 'w') as f:
                         json.dump(vasp_results, f)
+    
+    def parse_directory(self, root_dir):
+        """
+        This method is for parsing VASP XDATCAR and OUTCAR files from a batch OLCF VASP Job. 
+
+        Input:
+            root_dir (str): The root directory of the VASP job.
+        
+        Output:
+            data (dict): A dictionary containing the parsed data from the VASP job.
+        """
+        data = {}
+        
+        for subdir, dirs, files in os.walk(root_dir):
+            if 'supercell_' in os.path.basename(subdir):
+                subdir_data = {
+                    'structures': [],
+                    'energies': [],
+                    'forces': [],
+                    'stresses': []
+                }
+                
+                xdatcar_files = sorted([f for f in files if f.startswith('XDATCAR')])
+                outcar_files = sorted([f for f in files if f.startswith('OUTCAR')])
+                
+                for xdatcar, outcar in zip(xdatcar_files, outcar_files):
+                    xdatcar_path = os.path.join(subdir, xdatcar)
+                    outcar_path = os.path.join(subdir, outcar)
+                    
+                    try:
+                        structures = self.get_structures(xdatcar_path)
+                        forces = self.get_forces(outcar_path)
+                        energies = self.get_energy_without_entropy(outcar_path)
+                        stresses = self.get_stresses(outcar_path)
+                        
+                        min_length = min(len(structures), len(forces), len(energies), len(stresses))
+                        
+                        subdir_data['structures'].extend(structures[:min_length])
+                        subdir_data['energies'].extend(energies[:min_length])
+                        subdir_data['forces'].extend(forces[:min_length])
+                        subdir_data['stresses'].extend(stresses[:min_length])
+                    
+                    except Exception as e:
+                        print(f"Error processing {subdir}: {e}")
+                
+                data[os.path.basename(subdir)] = subdir_data
+        
+        return data
                 
                 
 
