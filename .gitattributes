@@ -1,1 +1,2 @@
+*.mson filter=lfs diff=lfs merge=lfs -text
 Visualization/Job_Structures/Pre_VASP/VCrTi_Fixed_512/debug_relaxed_entries.json filter=lfs diff=lfs merge=lfs -text
