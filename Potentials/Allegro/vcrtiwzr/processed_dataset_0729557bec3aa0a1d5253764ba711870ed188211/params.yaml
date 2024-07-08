@@ -1,0 +1,14 @@
+AtomicData_options:
+  r_max: 6.0
+ase_args:
+  format: extxyz
+dtype: torch.float64
+file_name: ./data/fixed_smaller_stress.extxyz
+include_frames: null
+include_keys:
+- virial
+key_mapping:
+  force: forces
+nequip_version: 0.6.0
+root: results/vcrtiwzr
+url: null
