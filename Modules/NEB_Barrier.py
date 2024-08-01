@@ -23,7 +23,7 @@ from chgnet.model.dynamics import CHGNetCalculator
 from chgnet.model import StructOptimizer
 
 # import mace 
-#from mace.calculators import MACECalculator
+from mace.calculators import MACECalculator
 #from MACEStructOptimizer import MACEStructOptimizer
 
 import torch
@@ -318,6 +318,9 @@ class NEB_Barrier:
         elif isinstance(potential,Potential): 
             for image in images:
                 image.calc = M3GNetCalculator(potential)
+        elif isinstance(potential,str):
+            for inage in images:
+                image.calc = MACECalculator(model_paths=[potential], device=device, default_dtype="float32")
         
         #elif isinstance(potential,str):
             #for image in images:
