@@ -15,16 +15,16 @@ from ase.io import write,read
 from ase.io.trajectory import Trajectory
 import os, sys, json, re
 
-import matgl
-from matgl.ext.ase import M3GNetCalculator, Relaxer
-from matgl.apps.pes import Potential
+#import matgl
+#from matgl.ext.ase import M3GNetCalculator, Relaxer
+#from matgl.apps.pes import Potential
 from chgnet.model.model import CHGNet
 from chgnet.model.dynamics import CHGNetCalculator
 from chgnet.model import StructOptimizer
 
 # import mace 
 from mace.calculators import MACECalculator
-#from MACEStructOptimizer import MACEStructOptimizer
+from MACEStructOptimizer import MACEStructOptimizer
 
 import torch
 import warnings
@@ -165,11 +165,11 @@ class NEB_Barrier:
             stress_dict_json = {key: np.array(value).tolist() for key, value in stress_dict.items()}
 
         # for matgl only 
-        elif isinstance(potential,Potential):
-            structure_dict_json = {key : value.as_dict() for key, value in structure_dict.items()}
-            energy_dict_json = {key: value.tolist() for key, value in energy_dict.items()}
-            forces_dict_json = {key: value.tolist() for key, value in forces_dict.items()}
-            stress_dict_json = {key: value.tolist() for key, value in stress_dict.items()}
+        #elif isinstance(potential,Potential):
+            #structure_dict_json = {key : value.as_dict() for key, value in structure_dict.items()}
+            #energy_dict_json = {key: value.tolist() for key, value in energy_dict.items()}
+            #forces_dict_json = {key: value.tolist() for key, value in forces_dict.items()}
+            #stress_dict_json = {key: value.tolist() for key, value in stress_dict.items()}
 
         # Create the results dictionary
         results_dict = {
@@ -214,28 +214,27 @@ class NEB_Barrier:
                 end_stresses = end_relaxed['trajectory'].stresses[-1]
                 end_structure = end_relaxed['final_structure']
 
-            elif isinstance(potential,Potential):
+            #elif isinstance(potential,Potential):
                 #print('Using M3GNet model = {0}'.format(potential))
-                relaxer = Relaxer(potential=potential,relax_cell=False)
+                #relaxer = Relaxer(potential=potential,relax_cell=False)
 
             #get the energy of the start
-                relax_start = relaxer.relax(self.start,fmax=0.01)
-                start_energy = float(relax_start['trajectory'].energies[-1])
-                start_structure = relax_start['final_structure']
-                start_forces = relax_start['trajectory'].forces[-1]
-                start_stresses = relax_start['trajectory'].stresses[-1]
+                #relax_start = relaxer.relax(self.start,fmax=0.01)
+                #start_energy = float(relax_start['trajectory'].energies[-1])
+                #start_structure = relax_start['final_structure']
+                #start_forces = relax_start['trajectory'].forces[-1]
+                #start_stresses = relax_start['trajectory'].stresses[-1]
 
-                relax_end = relaxer.relax(self.end,fmax=0.01)
-                end_energy = float(relax_end['trajectory'].energies[-1])
-                end_structure = relax_end['final_structure']
-                end_forces = relax_end['trajectory'].forces[-1]
-                end_stresses = relax_end['trajectory'].stresses[-1]
+                #relax_end = relaxer.relax(self.end,fmax=0.01)
+                #end_energy = float(relax_end['trajectory'].energies[-1])
+                #end_structure = relax_end['final_structure']
+                #end_forces = relax_end['trajectory'].forces[-1]
+                #end_stresses = relax_end['trajectory'].stresses[-1]
             
-            """
             elif isinstance(potential,str):
                 #print('Using MACE model = {0}'.format(potential))
-                calculator = MACECalculator(potential,device='cpu')
-                relaxer = MACEStructOptimizer(calculator)
+                calculator = MACECalculator(potential)
+                relaxer = MACEStructOptimizer(calculator, relax_cell = False)
                 start_relaxed = relaxer.relax(atoms = self.start, fmax=0.01,relax_cell=False,verbose=False)
                 end_relaxed = relaxer.relax(atoms = self.start, fmax=0.01, relax_cell=False,verbose=False)
 
@@ -249,7 +248,6 @@ class NEB_Barrier:
                 end_forces = end_relaxed['trajectory'].forces[-1]
                 end_stresses = end_relaxed['trajectory'].stresses[-1]
                 end_structure = end_relaxed['final_structure']
-            """
             
             #Update End Points
             self.matgl_energies.update({0: start_energy})
@@ -315,11 +313,11 @@ class NEB_Barrier:
                 #images[-1].calc = vac_calculator
                 images[0].calc = CHGNetCalculator(vac_potential,use_device=device)
                 images[-1].calc = CHGNetCalculator(vac_potential,use_device=device)
-        elif isinstance(potential,Potential): 
-            for image in images:
-                image.calc = M3GNetCalculator(potential)
+        #elif isinstance(potential,Potential): 
+            #for image in images:
+                #image.calc = M3GNetCalculator(potential)
         elif isinstance(potential,str):
-            for inage in images:
+            for image in images:
                 image.calc = MACECalculator(model_paths=[potential], device=device, default_dtype="float32")
         
         #elif isinstance(potential,str):
