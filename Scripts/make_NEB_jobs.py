@@ -18,6 +18,7 @@ from pymatgen.core import Structure
 
 sys.path.append('../Modules')
 from NEB_Barrier import NEB_Barrier
+from fix_order import *
 
 
 
@@ -108,6 +109,7 @@ def _create_neb_files(base_directory, job_path, relax = True, num_images=5):
 def create_neb_files(base_directory, job_path, output_dir, relax = True, num_images=5, mace_path = '../Potentials/Mace/vcrtiwzr_vac_stress_e1_f10_s100_stagetwo_compiled.model'):
     # Iterate through each subdirectory in base_directory that starts with "supercell"
     num_failed = 0
+    failed_runs = [] 
     for subdir in os.listdir(base_directory):
         if subdir.startswith('supercell'):
             subdir_path = os.path.join(base_directory, subdir)
@@ -139,31 +141,36 @@ def create_neb_files(base_directory, job_path, output_dir, relax = True, num_ima
                 # Load the start structure
                 start_structure = read(os.path.join(subdir_path, start_file))
                 if relax:
-                    #potential_path = '../Potentials/fin_vcrtiwzr_novirial_efs.pth'
-                    #species = {'V': 'V', 'Cr': 'Cr', 'Ti': 'Ti', 'W': 'W', 'Zr': 'Zr'}
-                    start_structure = mace_relaxer(atoms = start_structure, 
+                    rel_start_structure = mace_relaxer(atoms = start_structure, 
                                                    model_path= mace_path,
                                                    relax_cell=False, 
                                                    fmax=0.01, 
-                                                   steps=1000)
-                
+                                                   steps=1000,
+                                                   device='cuda')
+
                 for end_file in end_files:
                     # Load the end structure
                     end_structure = read(os.path.join(subdir_path, end_file))
+                    #fix_start_structure, fix_end_structure = fix_order(start_structure, end_structure)
                     if relax:
+                    #potential_path = '../Potentials/fin_vcrtiwzr_novirial_efs.pth'
+                    #species = {'V': 'V', 'Cr': 'Cr', 'Ti': 'Ti', 'W': 'W', 'Zr': 'Zr'}
+
                         #potential_path = '../Potentials/fin_vcrtiwzr_novirial_efs.pth'
                         #species = {'V': 'V', 'Cr': 'Cr', 'Ti': 'Ti', 'W': 'W', 'Zr': 'Zr'}
-                        end_structure = mace_relaxer(atoms = end_structure, 
+                        rel_end_structure = mace_relaxer(atoms = end_structure, 
                                                    model_path= mace_path,
                                                    relax_cell=False, 
                                                    fmax=0.01, 
-                                                   steps=1000)
+                                                   steps=1000,
+                                                   device='cuda')
+                    
                     
                     neb_dir = os.path.join(job_path, subdir, f'neb_vac_site_{vac_site}_to_{end_file.split("_")[-1].split(".")[0]}')
                     os.makedirs(neb_dir, exist_ok=True)
                     
-                    start_energy = start_structure.get_potential_energy()
-                    end_energy = end_structure.get_potential_energy()
+                    start_energy = rel_start_structure.get_potential_energy()
+                    end_energy = rel_end_structure.get_potential_energy()
                     # save the start and end energies as a json in the neb_dir
                     with open(os.path.join(neb_dir, 'energies.json'), 'w') as f:
                         json.dump({'start_energy': start_energy, 'end_energy': end_energy}, f)
@@ -174,22 +181,27 @@ def create_neb_files(base_directory, job_path, output_dir, relax = True, num_ima
                         continue
                     
                     #print(subdir)
-                    barrier = NEB_Barrier(start=start_structure,
-                                          end=end_structure,
+                    barrier = NEB_Barrier(start=rel_start_structure,
+                                          end=rel_end_structure,
                                           vasp_energies=[start_energy, end_energy],
-                                          composition= start_structure.get_chemical_formula(),
+                                          composition= rel_start_structure.get_chemical_formula(),
                                           structure_number = int(subdir.split('_')[-1]),
                                           defect_number = int(vac_site),
                                           direction = end_file.split("_")[-1].split(".")[0],
                                           root_path = neb_dir
                                           )
-                    barrier.neb_run(num_images=num_images,
+                    try:
+                        barrier.neb_run(num_images=num_images,
                                     potential = mace_path,
                                     vac_potential = None,
                                     run_relax = False,
                                     num_steps = 200,
                                     neb_run = False)
-                    
+                    except:
+                        print(f"failed to interpolate : {neb_dir}")
+                        failed_runs.append(neb_dir)
+                        continue
+                        
                     barrier.create_neb_vasp_job(output_directory = output_dir,
                                                  num_kpts = 3,
                                                  climb = False)
@@ -198,6 +210,9 @@ def create_neb_files(base_directory, job_path, output_dir, relax = True, num_ima
                     with open(os.path.join(barrier.neb_path, 'pre_neb_path.txt'), 'w') as f:
                         f.write(neb_dir)
                         
+    with open('./failed_runs.txt','w') as f:
+        f.write(failed_runs)
+
     print(f"NEB interpolation completed with {num_failed} failures.")
 
 def mace_relaxer(atoms, model_path, fmax = 0.01, steps = 250, relax_cell=True, optimizer = 'LBFGS', device='cpu'):

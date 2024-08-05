@@ -1,0 +1,1 @@
+../Visualization/Job_Structures/Pre_VASP/VCrTiWZr_Summit/gen_0_4/NEB_mace/supercell_gen_0_comp_10_struct_2/neb_vac_site_0_to_38
