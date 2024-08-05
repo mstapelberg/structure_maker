@@ -1,0 +1,11 @@
+/home/myless/.mambaforge/envs/mace-11.7/lib/python3.11/site-packages/nequip/__init__.py:20: UserWarning: !! PyTorch version 2.0.1+cu117 found. Upstream issues in PyTorch versions 1.13.* and 2.* have been seen to cause unusual performance degredations on some CUDA systems that become worse over time; see https://github.com/mir-group/nequip/discussions/311. The best tested PyTorch version to use with CUDA devices is 1.11; while using other versions if you observe this problem, an unexpected lack of this problem, or other strange behavior, please post in the linked GitHub issue.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/home/myless/Packages/structure_maker/Scripts/make_NEB_jobs.py", line 253, in <module>
+    create_neb_files(base_directory, 
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/myless/Packages/structure_maker/Scripts/make_NEB_jobs.py", line 144, in create_neb_files
+    start_structure = mace_relaxer(atoms = start_structure, 
+                      ^^^^^^^^^^^^
+NameError: name 'mace_relaxer' is not defined
+srun: error: gpu-rtx6000-02: task 0: Exited with exit code 1
