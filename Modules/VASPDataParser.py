@@ -285,7 +285,7 @@ class VASPDataParser:
             ]
         #)
 
-    def get_stresses(self, filename="OUTCAR", lines=None, si_unit=True):
+    def get_stresses(self, filename="OUTCAR", lines=None, si_unit=False):
         """
 
         Get's the stresses for every ionic step from the OUTCAR file
