@@ -6,16 +6,16 @@ from ase import Atoms
 from chgnet.model.model import CHGNet
 from chgnet.model.dynamics import CHGNetCalculator
 from pymatgen.io.ase import AseAtomsAdaptor
-from ase.filters import FrechetCellFilter
+from ase.filters import FrechetCellFilter 
 from ase.constraints import FixAtoms
 from ase.io import Trajectory
 import pickle
-from ase.atoms import Atoms, units
-import numpy as np
-import json
-from ase.optimize import LBFGS, FIRE, BFGS, MDMin, QuasiNewton
+from ase.atoms import Atoms, units 
+import numpy as np 
+import json, os
+from ase.optimize import LBFGS, FIRE, BFGS, MDMin, QuasiNewton 
 from ase.optimize.precon import PreconLBFGS
-from pymatgen.core import Structure
+from pymatgen.core import Structure 
 import sys
 sys.path.append('/home/myless/Packages/structure_maker/Modules')
 from defect_maker import make_defects, return_x_neighbors
@@ -75,51 +75,52 @@ def chgnet_relaxer(atoms, calculator, fmax=0.01, steps=250, verbose=False, relax
     if isinstance(atoms, Structure):
         atoms = AseAtomsAdaptor.get_atoms(atoms)
     new_atoms = atoms.copy()
-    new_atoms.calc = calculator
+    new_atoms.calc = calculator 
     if relax_cell:
         ucf = FrechetCellFilter(new_atoms)
         optimizer = PreconLBFGS(ucf)
     else:
         #new_atoms.set_constraint(FixAtoms(mask=[True for atom in new_atoms]))
         #ucf = FrechetCellFilter(new_atoms, constant_volume=True)
-        ucf = new_atoms
+        ucf = new_atoms 
         optimizer = PreconLBFGS(ucf)
     optimizer.run(fmax=fmax, steps=steps)
     return new_atoms
 
+#if __name__ == '__main__':
+    #import sys
+    #base_directory = sys.argv[1]
+    ## get the number from base_directory, should be like dir_X
+    #num = base_directory.split('_')[-1]
+    #job_path = f'../Visualization/Job_Structures/Pre_VASP/VCrTi_Fixed_125/NEB_fixed_{num}'
+    #vac_pot_path = '/home/myless/Packages/structure_maker/Potentials/Vacancy_Train_Results/bestF_epoch89_e2_f28_s55_mNA.pth.tar'
+    #neb_pot_path = '/home/myless/Packages/structure_maker/Potentials/Jan_26_100_Train_Results/bestF_epoch75_e3_f23_s23_mNA.pth.tar'
+    #vac_calculator = CHGNetCalculator(CHGNet.from_file(vac_pot_path))
+    #neb_calculator = CHGNetCalculator(CHGNet.from_file(neb_pot_path))
+    #create_and_run_neb_files(base_directory, job_path, relax=True, vac_calculator=vac_calculator, neb_calculator=neb_calculator)
+
+
 def main(base_directory):
     # Get the number from base_directory, should be like dir_X
     num = base_directory.split('_')[-1]
-    job_path = os.path.abspath(f'/home/myless/Packages/structure_maker/Visualization/Job_Structures/Pre_VASP/VCrTi_Fixed_125/NEB_fixed_{num}')
-    vac_pot_path = os.path.abspath('/home/myless/Packages/structure_maker/Potentials/Vacancy_Train_Results/bestF_epoch89_e2_f28_s55_mNA.pth.tar')
-    neb_pot_path = os.path.abspath('/home/myless/Packages/structure_maker/Potentials/Jan_26_100_Train_Results/bestF_epoch75_e3_f23_s23_mNA.pth.tar')
+    job_path = f'/home/myless/Packages/structure_maker/Visualization/Job_Structures/Pre_VASP/VCrTi_Fixed_125/NEB_fixed_{num}'
+    vac_pot_path = '/home/myless/Packages/structure_maker/Potentials/Vacancy_Train_Results/bestF_epoch89_e2_f28_s55_mNA.pth.tar'
+    neb_pot_path = '/home/myless/Packages/structure_maker/Potentials/Jan_26_100_Train_Results/bestF_epoch75_e3_f23_s23_mNA.pth.tar'
 
-    # Check if CUDA is available and get device count
-    if not torch.cuda.is_available():
-        raise RuntimeError("CUDA is not available. Please ensure you are running on a machine with GPUs.")
+    # Determine and set CUDA device based on environment variable
+    cuda_device = os.environ.get('CUDA_VISIBLE_DEVICES', '0')
+    device = torch.device(f'cuda:{cuda_device}' if torch.cuda.is_available() else 'cpu')
+    print(f"Running on device: {device}")
 
-    device_count = torch.cuda.device_count()
-    print(f"Number of CUDA devices available: {device_count}")
-
-    # Assign GPUs for calculations
-    if device_count >= 2:
-        vac_device = torch.device('cuda:0')
-        neb_device = torch.device('cuda:1')
-    else:
-        raise RuntimeError("Not enough GPUs available. At least 2 GPUs are required.")
-
-    print(f"Running vac_potentials on device: {vac_device}")
-    print(f"Running neb_potentials on device: {neb_device}")
-
-    # Initialize calculators with the appropriate devices
-    #vac_calculator = CHGNetCalculator(CHGNet.from_file(vac_pot_path), use_device=vac_device)
-    #neb_calculator = CHGNetCalculator(CHGNet.from_file(neb_pot_path), use_device=neb_device)
-    vac_calculator = vac_pot_path
-    neb_calculator = neb_pot_path
+    # Initialize calculators with the appropriate device
+    #vac_calculator = CHGNetCalculator(CHGNet.from_file(vac_pot_path), use_device=device)
+    #neb_calculator = CHGNetCalculator(CHGNet.from_file(neb_pot_path), use_device=device)
+    vac_calculator = CHGNet.from_file(vac_pot_path, use_device=device)
+    neb_calculator = CHGNet.from_file(neb_pot_path, use_device=device)
 
     create_and_run_neb_files(base_directory, job_path, relax=True, vac_calculator=vac_calculator, neb_calculator=neb_calculator)
 
 if __name__ == '__main__':
     import sys
-    base_directory = os.path.abspath(sys.argv[1])
+    base_directory = sys.argv[1]
     main(base_directory)
