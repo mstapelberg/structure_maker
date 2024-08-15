@@ -8,9 +8,10 @@ import numpy as np
 #from pymatgen.io.vasp import Poscar
 from ase.mep import NEB
 from ase.mep import DyNEB
-from ase.optimize.fire import FIRE as QuasiNewton
+from ase.optimize.fire import FIRE 
 from ase.optimize import BFGS
 from ase.optimize import LBFGS
+from ase.optimize.precon import PreconLBFGS, PreconFIRE, Exp 
 from ase.io import write,read
 from ase.io.trajectory import Trajectory
 import os, sys, json, re
@@ -337,7 +338,7 @@ class NEB_Barrier:
         
         if neb_run == True:
             try:
-                lbfgs = LBFGS(neb)  # here I am not making a trajectory file
+                lbfgs = FIRE(neb)  # here I am not making a trajectory file
                 early_stopping = EarlyStoppingCallback(threshold=1e-5, patience=10)
 
                 lbfgs.run(fmax=fmax, steps=num_steps)
